@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" href="css.css">
+</head>
+
+<body>
+    <canvas id="can" width="1024" height="768"></canvas>
+</body>
+
+</html>
+<script>
+    var arr = ["fish.png", "cannon.png", "bullet.png"]; //定义图片的路径
+    var can = document.getElementById("can"); //获取画布
+    var pen = can.getContext("2d"); //获取画笔
+    var fish = []; //鱼的个数 用来存储每条鱼 以及 每条鱼的 属性      
+    var cannon = {
+        x_: 500,
+        y_: 700
+    }; //初始化加农炮 
+    var bullet = [];
+
+
+    //调用生成鱼的方法
+    pushFish(3000);
+
+    //键盘事件
+    window.onkeydown = function (e) {
+        var key_ = e.keyCode;
+        switch (key_) {
+        case 37: //键盘上下左右 左方向键
+            if (cannon.x_ > 10)
+                cannon.x_ -= 2;
+            break;
+
+        case 39: //键盘上下左右 右方向键
+            if (cannon.x_ < 1000)
+                cannon.x_ += 2;
+            break;
+
+        case 32: //空格键 增加炮弹
+            bullet.push({
+                x_: cannon.x_ + 25,
+                y_: cannon.y_ + 10
+            });
+            break;
+        }
+
+    }
+
+    //调用预加载的方法 将每张图片缓存到浏览器中
+    imgLoads(arr, function (img) {
+        //预先绘制加农炮     
+        pen.drawImage(img.cannon, 0, 0, 74, 69, cannon.x_, cannon.y_, 74, 69);
+        setInterval(function () {
+
+            pen.clearRect(0, 0, 1024, 768);
+
+            for (var j = 0; j < fish.length; j++) {
+                fish[j].pic++;
+                if (fish[j].pic == 8) {
+                    fish[j].pic = 0;
+                }
+
+                //如果我们的鱼类数目大于0 说明存在鱼 开始渲染    
+                if (fish.length > 0) {
+                    // drawImage 是 canvas的 绘画的API 需要传入 9个 参数
+                    // 参数分别是 图片， 初始选取图片的X位置， 初始选取图片的y位置，图片选取的大小 宽， 图片选取的大小 高， 图片在画布中放置的位置X，初始选取图片的y位置，图片设置的大小 宽， 图片设置的大小 高   
+                    if (fish[j].x_ > 1000) {
+                        fish.splice(j, 1);
+                    } else {
+                        pen.drawImage(img.fish, 0, fish[j].pic * 126, 174, 126, fish[j].x_++, fish[j].y_, 174, 126);
+                    }
+                }
+            }
+            //======================================================================================
+            //绘制炮弹  
+            //如果存在炮弹则绘制
+            if (bullet.length > 0) {
+                for (var i = 0; i < bullet.length; i++) {
+                    bullet[i].y_ -= 5; //炮弹的速度为5
+                    if (bullet[i].y_ < 20) { //如果炮弹超出屏幕，则清除炮弹
+                        bullet.splice(i, 1);
+                    } else {
+                        //绘制炮弹
+                        pen.drawImage(img.bullet, 0, 0, 24, 26, bullet[i].x_, bullet[i].y_, 24, 26);
+                        //遍历出所有的炮弹的位置 与所有的鱼 进行碰撞检测
+                        for (var k = 0; k < fish.length; k++) {
+                            var status = crash(fish[k].x_, fish[k].y_, 174, 126, bullet[i].x_, bullet[i].y_, 24, 26);
+                            if (status) {
+                                //如果碰撞到则消失
+                                bullet.splice(i, 1);
+                                fish.splice(k, 1);
+                            }
+                        }
+                    }
+
+                }
+            }
+
+            //======================================================================================      
+            //绘制炮台             
+
+            pen.drawImage(img.cannon, 0, 0, 74, 69, cannon.x_, cannon.y_, 74, 69);
+
+        }, 1000 / 24);
+
+    });
+
+
+    //=================================================================================    
+    //公共方法    
+
+
+
+    //每秒钟生成鱼的方法
+    function pushFish(time_) {
+        setInterval(function () {
+            var random_ = Math.ceil(Math.random() * 500);
+            fish.push({
+                x_: -100,
+                y_: random_,
+                pic: 0
+            });
+        }, time_)
+    }
+
+
+    //懒加载的方法
+    function imgLoads(arr, callBack_) {
+        var json = {}; //存储我们的图片对象
+        var len = arr.length;
+        var load = 0;
+
+        for (var i = 0; i < len; i++) {
+            var img = new Image();
+            img.onload = function () {
+                load++;
+                if (load == len) {
+                    callBack_(json);
+                }
+            }
+            img.src = arr[i];
+            var key_ = arr[i].split(".")[0];
+            json[key_] = img;
+        }
+    }
+
+    //碰撞检测 匹配
+    function crash(x1, y1, w1, h1, x2, y2, w2, h2) {
+        var l1 = x1;
+        var r1 = x1 + w1;
+        var t1 = y1;
+        var b1 = y1 + h1;
+
+        var l2 = x2;
+        var r2 = x2 + w2;
+        var t2 = y2;
+        var b2 = y2 + h2;
+
+        if (r1 < l2 || l1 > r2 || t1 > b2 || b1 < t2) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+</script>
